@@ -1,6 +1,5 @@
-import pickle
+from model import get_model
 
-# caricamento dei dati per la rete
-with open("dataset.pkl", "rb") as f:
-    dataset = pickle.load(f)
 
+model = get_model(300, 50)
+model.summary()
