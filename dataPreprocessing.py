@@ -35,21 +35,20 @@ def clean_split_string(phrase):
 
 def create_dict(file):
     bar = progressbar.ProgressBar(max_value=400000, redirect_stdout=True)
-
     i = 0
+
     embeddings_dict = {}
     with open(file, 'r') as f:
         for line in f:
             values = line.split()
             word = values[0]
-            vector = np.asarray(values[1:], "float32")
+            vector = np.asarray(values[1:], dtype=np.float)
             embeddings_dict[word] = vector
             bar.update(i)
             i += 1
 
     bar.finish()
     return embeddings_dict
-
 
 glove = create_dict("/home/mary/PycharmProjects/kebdi/glove.6B.300d.txt")
 stop_words = list(stopwords.words('english'))
@@ -67,17 +66,9 @@ def main():
     in_phrases_train = []
     out_answer_train = []
 
-    # for each polot
-
-    phrases_emb, question_emb, answer_index = elaborate(plot, question, answer)
 
 
-# onehot index  a phrases_size
-# padding di zeors(300) (frasi nulle) polt fino a phrases_size
-# append della roba
-
-
-def elaborate(plot, question, answer):
+def elaborate(plot, question, answer, padding=100):
     phrases = plot.split('.')
 
     phrases_words = list(map(lambda x: lemmatize_words(remove_stop_words(clean_split_string(x))), phrases))
@@ -99,7 +90,18 @@ def elaborate(plot, question, answer):
 
     imin = np.argmin(dcos_all)
 
-    return [phrases_emb, question_emb, i]
+    emb_size = phrases_emb[0].shape[0]
+    plots = np.zeros((padding, emb_size))
+    for i in range(len(phrases_emb)):
+        plots[i] = phrases_emb[i]
+
+    phrases_emb = plots
+
+    #print(question)
+    #print(answer)
+    #print(phrases[imin])
+
+    return [phrases_emb, question_emb, imin]
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 from keras.models import Model
-from keras.layers import Input, Flatten, Dense, Concatenate, Lambda, Activation
+from keras.layers import Input, Flatten, Dense, Concatenate
 
 def get_model(embedding_size, phrases_size, m=100, k=100):
     context_input = Input([phrases_size, embedding_size], name='context_input')
@@ -19,6 +19,6 @@ def get_model(embedding_size, phrases_size, m=100, k=100):
 
     model = Model([context_input, query_input], output)
 
-    model.compile('rmsprop', 'sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='rmsprop', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     return model
