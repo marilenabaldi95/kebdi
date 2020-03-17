@@ -4,6 +4,9 @@ import os
 import numpy as np
 from dataPreprocessing import elaborate
 
+qa_json_path = '/home/mary/Scrivania/qa.json'
+plots_path = '/home/mary/PycharmProjects/kebdi/data/plot'
+
 
 def read_plots(path_plot):
     data_dict = {}
@@ -32,26 +35,26 @@ def elaborate_data(file_json, path_plot):
 
 
 def main():
-
-    data = elaborate_data('/home/mary/Scrivania/qa.json', '/home/mary/Scrivania/movieqa/text-plot/plot')
+    data = elaborate_data(qa_json_path, plots_path)
 
     train_phrases = []
     train_questions = []
     train_answers = []
-
+    np.seterr('raise')
     for i in range(len(data)):
         phrases_emb, question_emb, imin = elaborate(data[i][0], data[i][1], data[i][2])
+
         train_answers.append(imin)
         train_phrases.append(phrases_emb)
         train_questions.append(question_emb)
 
     train_phrases = np.asarray(train_phrases)
     train_questions = np.asarray(train_questions)
-    train_asnwers = np.asarray(train_answers)
+    train_answers = np.asarray(train_answers)
 
-    np.save('train_phrases.npy', train_phrases)
-    np.save('train_questions.npy', train_questions)
-    np.save('train_asnwers.npy', train_asnwers)
+    np.save('n_train_phrases.npy', train_phrases)
+    np.save('n_train_questions.npy', train_questions)
+    np.save('n_train_answers.npy', train_answers)
 
     ''' 
         m = 0
@@ -63,9 +66,9 @@ def main():
 
 
 def load_dataset():
-    train_phrases = np.load('train_phrases.npy')
-    train_questions = np.load('train_questions.npy')
-    train_answers = np.load('train_asnwers.npy')
+    train_phrases = np.load('n_train_phrases.npy')
+    train_questions = np.load('n_train_questions.npy')
+    train_answers = np.load('n_train_answers.npy')
 
     return [train_phrases, train_questions, train_answers]
 
