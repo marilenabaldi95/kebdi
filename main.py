@@ -3,10 +3,10 @@ from dataPreprocessing import load_dataset
 import numpy as np
 from tensorflow.keras.models import load_model
 
-model_path = '/home/mary/PycharmProjects/kebdi/models/modelp'
+model_path = '/home/mary/PycharmProjects/kebdi/models/model'
 
 batch_size = 32
-epochs = 25
+epochs = 30
 
 
 def test(model_path, test_phrases, test_questions, test_answers):
@@ -39,14 +39,19 @@ def main():
     phrases = np.reshape(phrases, (phrases.shape[0], phrases.shape[1], phrases.shape[2]))
 
     d_slice = int((phrases.shape[0]) * 3 / 4)
+    #print(d_slice)
+    #print("TOT ", (phrases.shape[0]))
 
     train_phrases = phrases[:d_slice]
     train_questions = questions[:d_slice]
     train_answers = answers[:d_slice]
 
-    test_phrases = phrases[d_slice:]
-    test_questions = questions[d_slice:]
-    test_answers = answers[d_slice:]
+    #test_phrases = phrases[d_slice:]
+    test_phrases = phrases[d_slice-80:d_slice+190]
+    #test_questions = questions[d_slice:]
+    test_questions = questions[d_slice-80:d_slice+190]
+    #test_answers = answers[d_slice:]
+    test_answers = answers[d_slice-80:d_slice+190]
 
     train(train_phrases, train_questions, train_answers)
     test(model_path, test_phrases, test_questions, test_answers)

@@ -12,7 +12,8 @@ import json
 
 glove_path = 'data/glove/glove_dataset_300d.txt'
 glove_model_path = 'models'
-qa_json_path = 'data/qa/qa.json'
+#qa_json_path = 'data/qa/qa.json'
+qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/newqa.json'
 plots_path = 'data/plot'
 data_path = 'data'
 
@@ -150,6 +151,8 @@ def create_glove():
                 f.write(" ")
             f.write("\n")
 
+    #print("Dimensione corpus glove: ", len(glove.dictionary))
+
 
 def read_plots(path_plot):
     data_dict = {}
@@ -181,8 +184,8 @@ glove = create_dict("/home/mary/PycharmProjects/kebdi/data/glove/glove.6B.300d.t
 '''if not os.path.exists(glove_path + '/glove.model'):
     create_glove()
 
-glove = create_dict(glove_path)
-'''
+glove = create_dict(glove_path)'''
+
 
 gloveize_phrase = lambda x: [glove[word] if word in glove.keys() else 1e-5*np.ones(300) for word in x]
 
@@ -190,7 +193,7 @@ gloveize_phrase = lambda x: [glove[word] if word in glove.keys() else 1e-5*np.on
 def elaborate(padding=100, custom_data=None):
     data = custom_data if custom_data is not None else elaborate_data(qa_json_path, plots_path)
     np.seterr('raise')
-    freq_dict = get_freq()
+    #freq_dict = get_freq()
 
     train_phrases = []
     train_questions = []
@@ -209,11 +212,11 @@ def elaborate(padding=100, custom_data=None):
         answer_vect = gloveize_phrase(answer_words)
         phrases_vect = list(map(lambda x: gloveize_phrase(x), phrases_words))
 
-        #question_emb = np.mean(question_vect, axis=0)
-        #answer_emb = np.mean(answer_vect, axis=0)
-        #phrases_emb = list(map(lambda x: np.mean(x, axis=0), phrases_vect))
+        question_emb = np.mean(question_vect, axis=0)
+        answer_emb = np.mean(answer_vect, axis=0)
+        phrases_emb = list(map(lambda x: np.mean(x, axis=0), phrases_vect))
 
-        q_weights = np.array([freq_dict[word] for word in question_words])
+        '''q_weights = np.array([freq_dict[word] for word in question_words])
         a_weights = np.array([freq_dict[word] for word in answer_words])
         #p_weights =
 
@@ -222,7 +225,7 @@ def elaborate(padding=100, custom_data=None):
 
 
         print(question_emb)
-        exit()
+        exit()'''
 
         dcos_all = []
         for k in range(len(phrases_emb)):
@@ -251,15 +254,15 @@ def elaborate(padding=100, custom_data=None):
     if custom_data is not None:
         return [train_phrases, train_questions, train_answers]
     else:
-        np.save(data_path + '/preglove_train_phrases.npy', train_phrases)
-        np.save(data_path + '/preglove_train_questions.npy', train_questions)
-        np.save(data_path + '/preglove_train_answers.npy', train_answers)
+        np.save(data_path + '/glove_phrases.npy', train_phrases)
+        np.save(data_path + '/glove_questions.npy', train_questions)
+        np.save(data_path + '/glove_answers.npy', train_answers)
 
 
 def load_dataset():
-    train_phrases = np.load(data_path + '/preglove_train_phrases.npy')
-    train_questions = np.load(data_path + '/preglove_train_questions.npy')
-    train_answers = np.load(data_path + '/preglove_train_answers.npy')
+    train_phrases = np.load(data_path + '/glove_phrases.npy')
+    train_questions = np.load(data_path + '/glove_questions.npy')
+    train_answers = np.load(data_path + '/glove_answers.npy')
 
     return [train_phrases, train_questions, train_answers]
 
