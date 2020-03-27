@@ -129,6 +129,8 @@ def elaborate():
         dizionario_list.append(dizionario)
         answer_emb_list.append(phrasemin)
 
+
+
     return [phrase_emb_list, question_emb_list, answer_emb_list, dizionario_list]
 
 

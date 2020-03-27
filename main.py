@@ -9,36 +9,37 @@ batch_size = 32
 epochs = 30
 
 
+#funzione che fa il test della rete. Si passano il modello della rete, le trame, domande, indici_risposte del test set
 def test(model_path, test_phrases, test_questions, test_answers):
     model = load_model(model_path)
 
-    prediction = model.predict([test_phrases, test_questions])
+    prediction = model.predict([test_phrases, test_questions]) #funzione per fare il test
 
-    scores = model.evaluate([test_phrases, test_questions], test_answers)
+    scores = model.evaluate([test_phrases, test_questions], test_answers) #funzione per ottenere i valori di loss e accuracy a fine test
     print('TEST output_loss: {} - output_acc: {}'.format(scores[0], scores[1]))
 
     for i in range(len(test_answers)):
         print('RESULT {} PREDICT {}'.format(test_answers[i], np.argmax(prediction[i])))
 
-
+#funzione che fa il training della rete. Si passano trame, domande e indici risposte del training set
 def train(train_phrases, train_questions, train_answers):
     model = get_model(300, 100, m=100, k=100)
     model.summary()
 
-    model.fit([train_phrases, train_questions], train_answers, batch_size=batch_size, epochs=epochs)
+    model.fit([train_phrases, train_questions], train_answers, batch_size=batch_size, epochs=epochs) #funzione per fare il training (quindi diamo anche l'output)
 
-    scores = model.evaluate([train_phrases, train_questions], train_answers)
+    scores = model.evaluate([train_phrases, train_questions], train_answers) #funzione per ottenere i valori di loss e accuracy a fine training
     print('TRAINING output_loss: {} - output_acc: {}'.format(scores[0], scores[1]))
 
-    model.save(model_path)
+    model.save(model_path) #salvataggio del modello, in modo da non doverlo rielaborare per il test
 
 
 def main():
-    phrases, questions, answers = load_dataset()
-    questions = np.reshape(questions, (questions.shape[0], 1, questions.shape[1]))
-    phrases = np.reshape(phrases, (phrases.shape[0], phrases.shape[1], phrases.shape[2]))
+    phrases, questions, answers = load_dataset() #caricamento dataset elaborato nel dataProcessing
+    questions = np.reshape(questions, (questions.shape[0], 1, questions.shape[1])) #ridimensionamento domande
+    phrases = np.reshape(phrases, (phrases.shape[0], phrases.shape[1], phrases.shape[2])) #ridimensionamento trama
 
-    d_slice = int((phrases.shape[0]) * 3 / 4)
+    d_slice = int((phrases.shape[0]) * 3 / 4) #3/4 di tutti i dati, per dare 3/4 al training e 1/4 al test
     #print(d_slice)
     #print("TOT ", (phrases.shape[0]))
 

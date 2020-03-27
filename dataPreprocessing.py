@@ -21,13 +21,15 @@ data_path = 'data'
 wordnet_lemmatizer = WordNetLemmatizer()
 stop_words = list(stopwords.words('english'))
 
-
+#funzione che si occupare di rimuovere le stop-words da una frase
 remove_stop_words = lambda line: [word for word in line if word not in stop_words]
 
-
+#funziona che si occuèa di lemmatizzare ogni parola di una frase
 lemmatize_words = lambda line: [wordnet_lemmatizer.lemmatize(word) for word in line]
 
 
+#funzione che si occupa di "ripulire", una per una, le frasi che le vengono passate: vengono rimossi tutti i simboli prima e dopo ogni parola; poi le frasi vengono splittate in parole
+#in output viene restituita la frase come lista di parole
 def clean_split_string(phrase):
     stop_chars = '|\\'.join(list(string.punctuation)) + ''
     m_regex = r'(' + stop_chars + ')*(\w+)(' + stop_chars + ')*'
@@ -36,6 +38,7 @@ def clean_split_string(phrase):
     return result.split()
 
 
+#funzione che si occupa di creare un dizionario python a partire dal file glove (quello con struttura parola-vettore ogni riga
 def create_dict(file):
     bar = progressbar.ProgressBar(max_value=400000, redirect_stdout=True) #14415
     i = 0
@@ -54,66 +57,8 @@ def create_dict(file):
     return embeddings_dict
 
 
-def get_freq():
-    data = elaborate_data(qa_json_path, plots_path)
-
-    all_plots = ''
-    all_questions = ''
-    for i in range(len(data)):
-        all_plots = all_plots + '\n' + data[i][0]
-        all_questions = all_questions + '\n' + data[i][1]
-
-    all_plots = all_plots.replace("\n", '')
-    all_questions = all_questions.replace('\n', '')
-    phrases_tmp = all_plots.split('.')
-    questions_tmp = all_questions.split('?')
-    phrases = [p for p in phrases_tmp if p is not '']
-    questions = [q for q in questions_tmp if q is not '']
-
-    phrases_words = list(map(lambda x: lemmatize_words(remove_stop_words(clean_split_string(x))), phrases))
-    question_words = list(map(lambda x: lemmatize_words(remove_stop_words(clean_split_string(x))), questions))
-    all_words = phrases_words + question_words
-
-    words_num = 0
-    unique_words = {}
-    for phrase in all_words:
-        for word in phrase:
-            if word in unique_words:
-                unique_words[word] = unique_words[word] + 1
-                words_num = words_num + 1
-            else:
-                unique_words[word] = 1
-                words_num = words_num + 1
-
-    for key in unique_words:
-        unique_words[key] = round(unique_words[key]/words_num, 12)
-
-    '''result_phrases = []
-    duplicates_phrases = []
-    for phrase in phrases_words:
-        unique = []
-        for word in phrase:
-            if word not in duplicates_phrases:
-                unique.append(word)
-                duplicates_phrases.append(word)
-        result_phrases.append(unique)
-    unique_phrases_words = result_phrases
-    result_questions = []
-    duplicates_questions = []
-    for phrase in question_words:
-        unique = []
-        for word in phrase:
-            if word not in duplicates_questions:
-                unique.append(word)
-                duplicates_questions.append(word)
-        result_questions.append(unique)
-    unique_questions_words = result_questions
-    unique_words = unique_phrases_words + unique_questions_words
-    print(len(unique_words))'''
-
-    return unique_words
-
-
+#funzione che si occupa di addestrare il glove: tutto il corpus è riportato in forma di lista di frasi, che a loro volta sono liste di parole
+#glove crea un modello a partire da questi dati e salva un file nella forma parola-vettore, in moodo da poterne salvare facilmente il dizionario con la funzione create_dict
 def create_glove():
     data = elaborate_data(qa_json_path, plots_path)
 
@@ -154,6 +99,7 @@ def create_glove():
     #print("Dimensione corpus glove: ", len(glove.dictionary))
 
 
+#funzione che legge i plot dai file. Viene passato il path dei plot e viene restituito un dizionario nella forma id_trama, trama
 def read_plots(path_plot):
     data_dict = {}
 
@@ -166,6 +112,7 @@ def read_plots(path_plot):
     return data_dict
 
 
+#funziona che, a partire dal json, facendo uso della funzione read_plots, crea un dizionario nella forma trama, domanda, risposta corretta
 def elaborate_data(file_json, path_plot):
     with open(file_json) as f:
         qa_dict = json.load(f)
@@ -180,6 +127,7 @@ def elaborate_data(file_json, path_plot):
     return data
 
 
+#creazione dizionario a partire da glove o pretrainato (primo) o trainato da noi (secondo)
 glove = create_dict("/home/mary/PycharmProjects/kebdi/data/glove/glove.6B.300d.txt")
 '''if not os.path.exists(glove_path + '/glove.model'):
     create_glove()
@@ -187,13 +135,19 @@ glove = create_dict("/home/mary/PycharmProjects/kebdi/data/glove/glove.6B.300d.t
 glove = create_dict(glove_path)'''
 
 
+#funzione che si occupa di associare ad ogni parola della frase, il corrispondente vettore di glove
 gloveize_phrase = lambda x: [glove[word] if word in glove.keys() else 1e-5*np.ones(300) for word in x]
 
 
+#funzione che si occupa di effettuare le operazioni di pulizia, rimozione stopwords e lemmatizzazione su tutte le trame, domande, risposte
+#effettua anche la media dei vettori parole per rappresentare la frase
+#fa anche l'associazione tra la risposta di qamovie e la frase della trama che contiene la risposta
+#trova l'indice della risposta corretta all'interno della trama
+#fa anche il padding delle frasi della trama
+#salva i vettori risultanti (trame, domande, risposte) in file .npy
 def elaborate(padding=100, custom_data=None):
     data = custom_data if custom_data is not None else elaborate_data(qa_json_path, plots_path)
     np.seterr('raise')
-    #freq_dict = get_freq()
 
     train_phrases = []
     train_questions = []
@@ -259,6 +213,7 @@ def elaborate(padding=100, custom_data=None):
         np.save(data_path + '/glove_answers.npy', train_answers)
 
 
+#funzione che carica i file numpy, in modo da non dover sempre riprocessare tutti i dati
 def load_dataset():
     train_phrases = np.load(data_path + '/glove_phrases.npy')
     train_questions = np.load(data_path + '/glove_questions.npy')
