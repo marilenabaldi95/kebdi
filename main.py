@@ -1,5 +1,5 @@
 from model import get_model
-from dataPreprocessing import load_dataset
+from dataPreprocessing import load_trainset, load_testset
 import numpy as np
 from tensorflow.keras.models import load_model
 
@@ -21,6 +21,7 @@ def test(model_path, test_phrases, test_questions, test_answers):
     for i in range(len(test_answers)):
         print('RESULT {} PREDICT {}'.format(test_answers[i], np.argmax(prediction[i])))
 
+
 #funzione che fa il training della rete. Si passano trame, domande e indici risposte del training set
 def train(train_phrases, train_questions, train_answers):
     model = get_model(300, 100, m=100, k=100)
@@ -35,24 +36,13 @@ def train(train_phrases, train_questions, train_answers):
 
 
 def main():
-    phrases, questions, answers = load_dataset() #caricamento dataset elaborato nel dataProcessing
-    questions = np.reshape(questions, (questions.shape[0], 1, questions.shape[1])) #ridimensionamento domande
-    phrases = np.reshape(phrases, (phrases.shape[0], phrases.shape[1], phrases.shape[2])) #ridimensionamento trama
+    train_phrases, train_questions, train_answers = load_trainset()
+    train_questions = np.reshape(train_questions, (train_questions.shape[0], 1, train_questions.shape[1]))
+    train_phrases = np.reshape(train_phrases, (train_phrases.shape[0], train_phrases.shape[1], train_phrases.shape[2]))
 
-    d_slice = int((phrases.shape[0]) * 3 / 4) #3/4 di tutti i dati, per dare 3/4 al training e 1/4 al test
-    #print(d_slice)
-    #print("TOT ", (phrases.shape[0]))
-
-    train_phrases = phrases[:d_slice]
-    train_questions = questions[:d_slice]
-    train_answers = answers[:d_slice]
-
-    #test_phrases = phrases[d_slice:]
-    test_phrases = phrases[d_slice-80:d_slice+190]
-    #test_questions = questions[d_slice:]
-    test_questions = questions[d_slice-80:d_slice+190]
-    #test_answers = answers[d_slice:]
-    test_answers = answers[d_slice-80:d_slice+190]
+    test_phrases, test_questions, test_answers = load_testset()
+    test_questions = np.reshape(test_questions, (test_questions.shape[0], 1, test_questions.shape[1]))
+    test_phrases = np.reshape(test_phrases, (test_phrases.shape[0], test_phrases.shape[1], test_phrases.shape[2]))
 
     train(train_phrases, train_questions, train_answers)
     test(model_path, test_phrases, test_questions, test_answers)

@@ -13,7 +13,8 @@ import json
 glove_path = 'data/glove/glove_dataset_300d.txt'
 glove_model_path = 'models'
 #qa_json_path = 'data/qa/qa.json'
-qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/newqa.json'
+#qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/train_qa.json'
+qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/test_qa.json'
 plots_path = 'data/plot'
 data_path = 'data'
 
@@ -208,16 +209,24 @@ def elaborate(padding=100, custom_data=None):
     if custom_data is not None:
         return [train_phrases, train_questions, train_answers]
     else:
-        np.save(data_path + '/glove_phrases.npy', train_phrases)
-        np.save(data_path + '/glove_questions.npy', train_questions)
-        np.save(data_path + '/glove_answers.npy', train_answers)
+        np.save(data_path + '/test_phrases.npy', train_phrases)
+        np.save(data_path + '/test_questions.npy', train_questions)
+        np.save(data_path + '/test_answers.npy', train_answers)
 
 
 #funzione che carica i file numpy, in modo da non dover sempre riprocessare tutti i dati
-def load_dataset():
-    train_phrases = np.load(data_path + '/glove_phrases.npy')
-    train_questions = np.load(data_path + '/glove_questions.npy')
-    train_answers = np.load(data_path + '/glove_answers.npy')
+def load_trainset():
+    train_phrases = np.load(data_path + '/train_phrases.npy')
+    train_questions = np.load(data_path + '/train_questions.npy')
+    train_answers = np.load(data_path + '/train_answers.npy')
+
+    return [train_phrases, train_questions, train_answers]
+
+
+def load_testset():
+    train_phrases = np.load(data_path + '/test_phrases.npy')
+    train_questions = np.load(data_path + '/test_questions.npy')
+    train_answers = np.load(data_path + '/test_answers.npy')
 
     return [train_phrases, train_questions, train_answers]
 
