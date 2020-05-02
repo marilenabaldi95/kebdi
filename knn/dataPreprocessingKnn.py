@@ -1,31 +1,33 @@
-import numpy as np
 import progressbar
 import re
 import string
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from glove import Corpus, Glove
-from scipy import spatial
-import os
-import glob
+import numpy as np
 import json
+import glob
+import os
+from scipy import spatial
+import pickle
+import nltk
 
-glove_path = 'data/glove/glove_dataset_300d.txt'
-glove_model_path = 'models'
-#qa_json_path = 'data/qa/qa.json'
-#qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/train_qa.json'
-qa_json_path = '/home/mary/PycharmProjects/kebdi/data/qa/test_qa.json'
-plots_path = 'data/plot'
-data_path = 'data'
+glove_model_path = '../models'
+glove_path = '../data/glove/glove_dataset_300d.txt'
+qa_json_path = '../data/qa/qa.json'
+plots_path = '../data/plot'
 
+#nltk.download()
 
-wordnet_lemmatizer = WordNetLemmatizer()
 stop_words = list(stopwords.words('english'))
+wordnet_lemmatizer = WordNetLemmatizer()
+
 
 #funzione che si occupare di rimuovere le stop-words da una frase
 remove_stop_words = lambda line: [word for word in line if word not in stop_words]
 
-#funziona che si occuèa di lemmatizzare ogni parola di una frase
+
+#funziona che si occupa di lemmatizzare ogni parola di una frase
 lemmatize_words = lambda line: [wordnet_lemmatizer.lemmatize(word) for word in line]
 
 
@@ -113,7 +115,7 @@ def read_plots(path_plot):
     return data_dict
 
 
-#funziona che, a partire dal json, facendo uso della funzione read_plots, crea un dizionario nella forma trama, domanda, risposta corretta
+#funziona che, a partire dal json, facendo uso della funzione read_plots, crea un dizionario nella forma trama, domanda, risposta corretta (risposta del json)
 def elaborate_data(file_json, path_plot):
     with open(file_json) as f:
         qa_dict = json.load(f)
@@ -129,11 +131,14 @@ def elaborate_data(file_json, path_plot):
 
 
 #creazione dizionario a partire da glove o pretrainato (primo) o trainato da noi (secondo)
-glove = create_dict("/home/mary/PycharmProjects/kebdi/data/glove/glove.6B.300d.txt")
-'''if not os.path.exists(glove_path + '/glove.model'):
+glove = create_dict("../data/glove/glove.6B.300d.txt")
+
+
+'''if not os.path.exists(glove_model_path + '/glove.model'):
     create_glove()
 
 glove = create_dict(glove_path)'''
+
 
 
 #funzione che si occupa di associare ad ogni parola della frase, il corrispondente vettore di glove
@@ -142,20 +147,18 @@ gloveize_phrase = lambda x: [glove[word] if word in glove.keys() else 1e-5*np.on
 
 #funzione che si occupa di effettuare le operazioni di pulizia, rimozione stopwords e lemmatizzazione su tutte le trame, domande, risposte
 #effettua anche la media dei vettori parole per rappresentare la frase
-#fa anche l'associazione tra la risposta di qamovie e la frase della trama che contiene la risposta
-#trova l'indice della risposta corretta all'interno della trama
-#fa anche il padding delle frasi della trama
-#salva i vettori risultanti (trame, domande, risposte) in file .npy
-def elaborate(padding=100, custom_data=None):
-    data = custom_data if custom_data is not None else elaborate_data(qa_json_path, plots_path)
-    np.seterr('raise')
+#fa anche l'associazione tra la risposta di del json e frase della trama che contiene la risposta
+def elaborate():
+    data = elaborate_data(qa_json_path, plots_path)
+    #np.seterr('raise')
 
-    train_phrases = []
-    train_questions = []
-    train_answers = []
+    phrase_emb_list = []
+    question_emb_list = []
+    answer_emb_list = []
+    dizionario_list = []
     for i in range(len(data)):
-        plot = data[i][0].replace("\n", '')
-        phrases_tmp = plot.split('.')
+        nplot = data[i][0].replace("\n", '')
+        phrases_tmp = nplot.split('.')
         phrasesa = [p for p in phrases_tmp if (len(p) is not 0)]
         phrases = [p for p in phrasesa if (len(p) is not 1)]
 
@@ -164,72 +167,74 @@ def elaborate(padding=100, custom_data=None):
         answer_words = lemmatize_words(remove_stop_words(clean_split_string(data[i][2])))
 
         question_vect = gloveize_phrase(question_words)
-        answer_vect = gloveize_phrase(answer_words)
         phrases_vect = list(map(lambda x: gloveize_phrase(x), phrases_words))
+        answer_vect = gloveize_phrase(answer_words)
 
         question_emb = np.mean(question_vect, axis=0)
-        answer_emb = np.mean(answer_vect, axis=0)
         phrases_emb = list(map(lambda x: np.mean(x, axis=0), phrases_vect))
-
-        '''q_weights = np.array([freq_dict[word] for word in question_words])
-        a_weights = np.array([freq_dict[word] for word in answer_words])
-        #p_weights =
-
-        question_emb = np.average(np.array(question_vect), axis=0, weights=q_weights)
-        answer_emb = np.average(np.array(answer_vect), axis=0, weights=a_weights)
-
-
-        print(question_emb)
-        exit()'''
+        answer_emb = np.mean(answer_vect, axis=0)
 
         dcos_all = []
         for k in range(len(phrases_emb)):
+            #print("DOMANDA: ", answer_emb)
+            #print("RISPOSTA: ", phrases_emb[k])
             dcos = spatial.distance.cosine(answer_emb, phrases_emb[k])
             dcos_all.append(dcos)
 
         imin = np.argmin(dcos_all)
-        #phrasemin = phrases_emb[imin]
+        phrasemin = phrases_emb[imin]
 
-        emb_size = phrases_emb[0].shape[0]
-        plots = np.zeros((padding, emb_size))
-        for j in range(len(phrases_emb)):
-            plots[j] = phrases_emb[j]
+        dizionario = list()
+        for value in phrases_emb:
+            dizionario.append(value)
+        for val in phrases:
+            dizionario.append(val)
 
-        phrases_emb = plots
+        phrase_emb_list.append(phrases_emb)
+        question_emb_list.append(question_emb)
+        dizionario_list.append(dizionario)
+        answer_emb_list.append(phrasemin)
 
-        train_answers.append(imin)
-        #train_answers.append(phrasemin)
-        train_phrases.append(phrases_emb)
-        train_questions.append(question_emb)
-
-    train_phrases = np.asarray(train_phrases)
-    train_questions = np.asarray(train_questions)
-    train_answers = np.asarray(train_answers)
-
-    if custom_data is not None:
-        return [train_phrases, train_questions, train_answers]
-    else:
-        np.save(data_path + '/test_phrases.npy', train_phrases)
-        np.save(data_path + '/test_questions.npy', train_questions)
-        np.save(data_path + '/test_answers.npy', train_answers)
+    return [phrase_emb_list, question_emb_list, answer_emb_list, dizionario_list]
 
 
-#funzione che carica i file numpy, in modo da non dover sempre riprocessare tutti i dati
-def load_trainset():
-    train_phrases = np.load(data_path + '/train_phrases.npy')
-    train_questions = np.load(data_path + '/train_questions.npy')
-    train_answers = np.load(data_path + '/train_answers.npy')
+#funzione utilizzata dalla GUI del k-NN per elaborare (come nella funzione elaborate() una sola coppia [trama, domanda])
+#si è preferito utilizzare un'altra funzione, poiché non bisogna elaborare anche la risposta per associarla alla frase della trama che la contiene
+def userelaborate(data):
+    train_phrases = []
+    train_questions = []
+    dizionario_list = []
 
-    return [train_phrases, train_questions, train_answers]
+    plot = data[0].replace("\n", '')
+    phrases_tmp = plot.split('.')
+    phrasesa = [p.strip() for p in phrases_tmp if (len(p) is not 0)]
+    phrases = [p.strip() for p in phrasesa if (len(p) is not 1)]
 
+    phrases_words = list(map(lambda x: lemmatize_words(remove_stop_words(clean_split_string(x))), phrases))
+    question_words = lemmatize_words(remove_stop_words(clean_split_string(data[1])))
 
-def load_testset():
-    train_phrases = np.load(data_path + '/test_phrases.npy')
-    train_questions = np.load(data_path + '/test_questions.npy')
-    train_answers = np.load(data_path + '/test_answers.npy')
+    question_vect = gloveize_phrase(question_words)
+    phrases_vect = list(map(lambda x: gloveize_phrase(x), phrases_words))
 
-    return [train_phrases, train_questions, train_answers]
+    question_emb = np.mean(question_vect, axis=0)
+    phrases_emb = list(map(lambda x: np.mean(x, axis=0), phrases_vect))
+
+    dizionario = list()
+    for value in phrases_emb:
+        dizionario.append(value)
+    for val in phrases:
+        dizionario.append(val)
+
+    train_phrases.append(phrases_emb)
+    train_questions.append(question_emb)
+    dizionario_list.append(dizionario)
+
+    return [phrases_emb, question_emb, dizionario]
 
 
 if __name__ == '__main__':
-    elaborate()
+    data = elaborate()
+
+    # salva i risultati (trame, domande, risposte) su file
+    with open("data.txt", "wb") as fp:
+        pickle.dump(data, fp)
